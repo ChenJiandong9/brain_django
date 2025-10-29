@@ -1,0 +1,6 @@
+NEW_FILE_CODE
+Django>=4.2
+channels>=4.0.0
+pandas>=1.5.0
+# 如果要使用火山引擎API，请取消下面一行的注释并安装
+# volcenginesdkarkruntime>=1.0.0
