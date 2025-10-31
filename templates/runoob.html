@@ -451,9 +451,10 @@
           }
           
           try {
-            // 根据当前协议选择 WebSocket 或安全 WebSocket
-            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            this.websocket = new WebSocket(protocol + window.location.host + '/ws/eeg/');
+            // 使用绝对路径，避免协议问题
+            const wsUrl = 'ws://' + window.location.host + '/ws/eeg/';
+            
+            this.websocket = new WebSocket(wsUrl);
             
             // 连接成功回调
             this.websocket.onopen = () => {
@@ -478,7 +479,7 @@
             
             // 连接错误回调
             this.websocket.onerror = (error) => {
-              this.$message.error('连接发生错误: ' + error);
+              this.$message.error('连接发生错误: ' + error.message);
             };
           } catch (error) {
             this.$message.error('连接失败: ' + error.message);
@@ -695,6 +696,11 @@
           this.$message.success('后端连接正常');
         },
           
+
+
+
+
+
         /**
          * 检查蓝牙支持情况
          * 检测浏览器是否支持Web Bluetooth API以及运行环境是否满足要求
@@ -746,9 +752,9 @@
           if (!this.checkBluetoothSupport()) {
             return;
           }
-
+         
           this.$message.info('正在扫描蓝牙设备...');
-          
+          console.log('开始扫描设备...');
           // 请求扫描蓝牙设备
           navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
@@ -879,6 +885,14 @@
           }
         },
 
+
+
+
+
+
+
+
+        
         /**
          * 测试API密钥
          * 验证用户输入的API密钥是否有效
@@ -932,65 +946,65 @@
           this.$message.success('日志已清空');
         },
         
-        /**
-         * 处理WebSocket消息
-         * 根据消息类型处理从后端接收到的消息
-         * @param {Object} data - 从后端接收到的消息数据
-         */
-        handleWebSocketMessage: function(data) {
-          switch (data.type) {
-            case 'data_received':
-              this.logContent += `[${new Date().toLocaleTimeString()}] 数据已接收: ${data.timestamp}\n`;
-              break;
-              
-            case 'data_error':
-              this.$message.error('数据处理错误: ' + data.error);
-              this.logContent += `[${new Date().toLocaleTimeString()}] 错误: ${data.error}\n`;
-              break;
-              
-            case 'import_success':
-              this.$message.success('导入数据已成功保存到服务器');
-              this.logContent += `[${new Date().toLocaleTimeString()}] 导入数据已保存: ${data.file_path}\n`;
-              break;
-              
-            case 'analysis_result':
-              if (data.success) {
-                this.reportContent = data.content;
-                this.activeTab = 'report';
-                this.$message.success('分析完成');
-                this.logContent += `[${new Date().toLocaleTimeString()}] 分析完成\n`;
-              } else {
-                this.$message.error('分析失败: ' + data.error);
-                this.logContent += `[${new Date().toLocaleTimeString()}] 分析失败: ${data.error}\n`;
+                    /**
+             * 处理WebSocket消息
+             * 根据消息类型处理从后端接收到的消息
+             * @param {Object} data - 从后端接收到的消息数据
+             */
+            handleWebSocketMessage: function(data) {
+              switch (data.type) {
+                case 'data_received':
+                  this.logContent += `[${new Date().toLocaleTimeString()}] 数据已接收: ${data.timestamp}\n`;
+                  break;
+                  
+                case 'data_error':
+                  this.$message.error('数据处理错误: ' + data.error);
+                  this.logContent += `[${new Date().toLocaleTimeString()}] 错误: ${data.error}\n`;
+                  break;
+                  
+                case 'import_success':
+                  this.$message.success('导入数据已成功保存到服务器');
+                  this.logContent += `[${new Date().toLocaleTimeString()}] 导入数据已保存: ${data.file_path}\n`;
+                  break;
+                  
+                case 'analysis_result':
+                  if (data.success) {
+                    this.reportContent = data.content;
+                    this.activeTab = 'report';
+                    this.$message.success('分析完成');
+                    this.logContent += `[${new Date().toLocaleTimeString()}] 分析完成\n`;
+                  } else {
+                    this.$message.error('分析失败: ' + data.error);
+                    this.logContent += `[${new Date().toLocaleTimeString()}] 分析失败: ${data.error}\n`;
+                  }
+                  break;
+                  
+                case 'error':
+                  this.$message.error('服务器错误: ' + data.message);
+                  this.logContent += `[${new Date().toLocaleTimeString()}] 服务器错误: ${data.message}\n`;
+                  break;
               }
-              break;
               
-            case 'error':
-              this.$message.error('服务器错误: ' + data.message);
-              this.logContent += `[${new Date().toLocaleTimeString()}] 服务器错误: ${data.message}\n`;
-              break;
-          }
-          
-          // 滚动到日志底部
-          this.$nextTick(() => {
-            const logPanel = document.querySelector('.el-tab-pane[name="log"] .placeholder');
-            if (logPanel) {
-              logPanel.scrollTop = logPanel.scrollHeight;
+              // 滚动到日志底部
+              this.$nextTick(() => {
+                const logPanel = document.querySelector('.el-tab-pane[name="log"] .placeholder');
+                if (logPanel) {
+                  logPanel.scrollTop = logPanel.scrollHeight;
+                }
+              });
             }
-          });
-        }
-// ... existing code ...      },
-      
-      watch: {
-        isRecording: function(newVal) {
-          this.dataStatus = newVal ? '正在记录数据...' : '未保存数据';
-        }
-      },
-      
-      mounted: function() {
-        this.testBackend();
-      }
-    });
+          },
+     
+          watch: {
+            isRecording: function(newVal) {
+              this.dataStatus = newVal ? '正在记录数据...' : '未保存数据';
+            }
+          },
+          
+          mounted: function() {
+            this.testBackend();
+          }
+        });
   </script>
   {% endverbatim %}
 </body>
