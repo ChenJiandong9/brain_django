@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure-3!h#geecez)h%$tiqyugj$mu+*dz21bj-fg3_2021jx7%gka@p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# 修改ALLOWED_HOSTS以支持本地HTTPS测试
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
 
 # Application definition
@@ -38,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'brain_start',
+    'django_extensions',
     'channels',
 ]
 
@@ -89,15 +91,15 @@ CHANNEL_LAYERS = {
 #     }
 # }
 DATABASES={
-    'default': 
-    {
-        'engine': 'django.db.backends.mysql','
-        'name': 'brain_django',
-        'user': 'root',
-        'password': '3.14',
-        'host': '10.5.111.174',
-        'port': '3306',
-    }
+    # 'default': 
+    # {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'brain_django',
+    #     'USER': 'root',
+    #     'PASSWORD': '',
+    #     'HOST': '10.5.111.174',
+    #     'PORT': '3306',
+    # }
     
 }
 
@@ -158,3 +160,13 @@ os.makedirs(ANALYSIS_DIR, exist_ok=True)
 
 # 火山引擎API密钥
 DEFAULT_API_KEY = "7a9d2091-b88e-4910-ac1b-b9301de2259f"
+
+# 添加安全设置以支持本地HTTPS开发
+SECURE_SSL_REDIRECT = False  # 在生产环境中应设为True
+SECURE_HSTS_SECONDS = 300  # 在生产环境中应设为更大的值
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+SESSION_COOKIE_SECURE = False  # 在生产环境中应设为True
+CSRF_COOKIE_SECURE = False  # 在生产环境中应设为True
