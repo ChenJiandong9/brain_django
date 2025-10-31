@@ -18,12 +18,13 @@ Including another URLconf
 from django.urls import path, re_path,include
 from django.contrib import admin
 from django.conf import settings
-from brain_start.views import runoob, serve_report, import_eeg_data,analyze_existing_data,test_api_key
+from brain_start.views import runoob, serve_report, import_eeg_data,analyze_existing_data,test_api_key,eeg
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', runoob),
+    path('eeg/',eeg),
     path('api/import-eeg-data/', import_eeg_data, name='import_eeg_data'),
     path('api/analyze-existing-data/', analyze_existing_data, name='analyze_existing_data'),
     path('api/test-api-key/', test_api_key, name='test_api_key'),

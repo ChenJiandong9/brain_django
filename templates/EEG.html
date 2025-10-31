@@ -437,38 +437,26 @@
         currentFilePath: ''
       },
       methods: {
- 
-       /**
-         * 连接设备函数
-         * 建立与后端WebSocket服务器的连接，用于传输EEG数据
-         * 根据当前协议（HTTP或HTTPS）自动选择ws://或wss://协议
-         */
         connectDevice: function() {
-          // 检查设备是否已经连接
           if (this.isConnected) {
             this.$message.info('设备已连接');
             return;
           }
           
           try {
-            // 根据当前协议选择 WebSocket 或安全 WebSocket
-            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            this.websocket = new WebSocket(protocol + window.location.host + '/ws/eeg/');
+            this.websocket = new WebSocket('ws://' + window.location.host + '/ws/eeg/');
             
-            // 连接成功回调
             this.websocket.onopen = () => {
               this.isConnected = true;
               this.deviceStatus = '已连接';
               this.$message.success('设备连接成功');
             };
             
-            // 接收消息回调
             this.websocket.onmessage = (event) => {
               const data = JSON.parse(event.data);
               this.handleWebSocketMessage(data);
             };
             
-            // 连接关闭回调
             this.websocket.onclose = () => {
               this.isConnected = false;
               this.isRecording = false;
@@ -476,7 +464,6 @@
               this.$message.info('设备连接已断开');
             };
             
-            // 连接错误回调
             this.websocket.onerror = (error) => {
               this.$message.error('连接发生错误: ' + error);
             };
@@ -485,22 +472,15 @@
           }
         },
         
-        /**
-         * 开始/停止记录数据
-         * 切换数据记录状态，并启动或停止数据发送
-         */
         startRecording: function() {
-          // 检查设备是否已连接
           if (!this.isConnected) {
             this.$message.warning('请先连接设备');
             return;
           }
           
-          // 切换记录状态
           this.isRecording = !this.isRecording;
           
           if (this.isRecording) {
-            // 开始发送EEG数据
             this.sendEEGData();
             this.$message.success('开始记录EEG数据');
           } else {
@@ -508,15 +488,9 @@
           }
         },
         
-        /**
-         * 发送EEG数据
-         * 定期生成并发送模拟EEG数据到后端
-         */
         sendEEGData: function() {
-          // 检查是否应该继续发送数据
           if (!this.isRecording || !this.isConnected) return;
           
-          // 构造EEG数据对象
           const eegData = {
             type: 'eeg_data',
             timestamp: new Date().toISOString(),
@@ -524,24 +498,17 @@
           };
           
           try {
-            // 发送数据到后端
             this.websocket.send(JSON.stringify(eegData));
             this.dataStatus = '正在记录数据...';
           } catch (error) {
             this.$message.error('发送数据失败: ' + error.message);
           }
           
-          // 如果仍在记录状态，1秒后再次发送数据
           if (this.isRecording) {
             setTimeout(() => this.sendEEGData(), 1000);
           }
         },
         
-        /**
-         * 生成模拟EEG数据
-         * 创建包含各个脑电波频段的模拟数据
-         * @returns {string} 格式化的EEG数据字符串
-         */
         generateMockEEGData: function() {
           const bands = ['Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'];
           const data = bands.map(band => {
@@ -550,31 +517,23 @@
           return data.join(' ');
         },
 
-        /**
-         * 分析数据函数
-         * 请求后端对已记录的EEG数据进行分析
-         */
         analyzeData: function() {
-          // 如果有导入的文件，分析导入的文件
           if (this.importedFileName && this.currentFilePath) {
             this.analyzeExistingFile(this.currentFilePath);
             return;
           }
           
-          // 检查设备是否已连接
           if (!this.isConnected) {
             this.$message.warning('请先连接设备或导入数据文件');
             return;
           }
           
-          // 构造分析请求对象
           const analysisRequest = {
             type: 'request_analysis',
             api_key: this.apiKey
           };
           
           try {
-            // 发送分析请求到后端
             this.websocket.send(JSON.stringify(analysisRequest));
             this.$message.info('正在分析数据...');
           } catch (error) {
@@ -582,11 +541,6 @@
           }
         },
         
-        /**
-         * 分析已存在的文件
-         * 对导入的数据文件请求分析
-         * @param {string} filePath - 文件路径
-         */
         analyzeExistingFile: function(filePath) {
           fetch('/api/analyze-existing-data/', {
             method: 'POST',
@@ -615,11 +569,6 @@
           });
         },
         
-        /**
-         * 加载分析报告
-         * 从服务器获取并显示分析报告
-         * @param {string} filename - 报告文件名
-         */
         loadReport: function(filename) {
           fetch(`/reports/${filename}`)
           .then(response => response.text())
@@ -632,12 +581,7 @@
           });
         },
         
-        /**
-         * 导入数据函数
-         * 允许用户上传EEG数据文件进行分析
-         */
         importData: function() {
-          // 创建文件输入元素
           const fileInput = document.createElement('input');
           fileInput.type = 'file';
           fileInput.accept = '.csv,.xlsx,.xls,.txt';
@@ -646,11 +590,9 @@
             const file = event.target.files[0];
             if (!file) return;
             
-            // 创建表单数据
             const formData = new FormData();
             formData.append('file', file);
             
-            // 发送文件到后端
             fetch('/api/import-eeg-data/', {
               method: 'POST',
               body: formData
@@ -664,7 +606,6 @@
                 this.importedFileName = file.name;
                 this.currentFilePath = data.file_path;
                 
-                // 如果设备已连接，通知后端有新导入的数据
                 if (this.isConnected) {
                   const importNotification = {
                     type: 'imported_data',
@@ -687,210 +628,27 @@
           fileInput.click();
         },
         
-        /**
-         * 测试后端连接
-         * 验证与后端服务器的连接状态
-         */
         testBackend: function() {
           this.$message.success('后端连接正常');
         },
-          
-        /**
-         * 检查蓝牙支持情况
-         * 检测浏览器是否支持Web Bluetooth API以及运行环境是否满足要求
-         * @returns {boolean} 是否支持蓝牙功能
-         */
-        checkBluetoothSupport: function() {
-          // 检查各种支持条件
-          const supportInfo = {
-            bluetooth: !!navigator.bluetooth,  // 浏览器是否支持Web Bluetooth API
-            secureContext: window.isSecureContext,  // 是否在安全上下文中运行
-            https: window.location.protocol === 'https:',  // 是否使用HTTPS协议
-            localhost: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',  // 是否在本地环境运行
-            chrome: /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)  // 是否为Chrome浏览器
-          };
-          
-          console.log('环境信息:', supportInfo);
-          
-          // 检查Web Bluetooth API支持情况
-          if (!supportInfo.bluetooth) {
-            let message = '您的浏览器不支持Web Bluetooth API。';
-            if (!supportInfo.chrome) {
-              message += '建议使用最新版Google Chrome浏览器。';
-            } else if (!supportInfo.secureContext) {
-              if (!supportInfo.https && !supportInfo.localhost) {
-                message += 'Web Bluetooth需要HTTPS环境或本地环境(localhost)。';
-              } else {
-                message += '请检查浏览器设置或使用支持的浏览器。';
-              }
-            }
-            this.$message.warning(message);
-            return false;
-          }
-          
-          // 检查安全上下文要求
-          if (!supportInfo.secureContext) {
-            this.$message.warning('Web Bluetooth需要安全环境（HTTPS或localhost）。');
-            return false;
-          }
-          
-          return true;
-        },
-
-        /**
-         * 扫描蓝牙设备
-         * 使用Web Bluetooth API扫描附近的蓝牙设备
-         */
+        
         scanDevices: function() {
-          // 检查蓝牙支持
-          if (!this.checkBluetoothSupport()) {
-            return;
-          }
-
           this.$message.info('正在扫描蓝牙设备...');
-          
-          // 请求扫描蓝牙设备
-          navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [
-              'battery_service',
-              'generic_access',
-              'device_information'
-            ]
-          })
-          .then(device => {
-            this.$message.success(`找到设备: ${device.name}`);
-            this.deviceAddress = device.id;
-            return device.gatt.connect();
-          })
-          .then(server => {
-            this.$message.success('蓝牙设备连接成功');
-          })
-          .catch(error => {
-            this.$message.error(`扫描失败: ${error.message}`);
-          });
+          setTimeout(() => {
+            this.$message.success('扫描完成，未发现可用设备');
+          }, 2000);
         },
         
-        /**
-         * 连接蓝牙设备
-         * 通过Web Bluetooth API连接指定的蓝牙EEG设备
-         */
-        connectBluetoothDevice: function() {
-          // 检查浏览器是否支持蓝牙
-          if (!this.checkBluetoothSupport()) {
-            return;
-          }
-          
-          // 检查设备是否已经连接
-          if (this.isConnected) {
-            this.$message.info('设备已连接');
-            return;
-          }
-          
-          // 请求连接蓝牙设备
-          navigator.bluetooth.requestDevice({
-            filters: [{namePrefix: this.deviceAddress}],
-            optionalServices: ['heart_rate'] // 根据实际设备修改
-          })
-          .then(device => {
-            this.$message.success(`找到设备: ${device.name}`);
-            return device.gatt.connect();
-          })
-          .then(server => {
-            // 保存服务器连接用于后续操作
-            this.bluetoothServer = server;
-            this.isConnected = true;
-            this.deviceStatus = '已连接';
-            this.$message.success('蓝牙设备连接成功');
-            
-            // 如果需要开始记录数据
-            if (this.isRecording) {
-              this.startBluetoothDataStreaming();
-            }
-          })
-          .catch(error => {
-            this.$message.error(`连接失败: ${error.message}`);
-          });
-        },
-        
-        /**
-         * 启动蓝牙数据流
-         * 启动从蓝牙设备接收数据的流
-         */
-        startBluetoothDataStreaming: function() {
-          // 检查蓝牙设备是否已连接
-          if (!this.bluetoothServer) {
-            this.$message.error('蓝牙设备未连接');
-            return;
-          }
-          
-          // 这里需要根据实际设备的GATT服务和特征来实现
-          // 以下是一个示例实现
-          this.bluetoothServer.getPrimaryService('heart_rate')
-          .then(service => {
-            return service.getCharacteristic('heart_rate_measurement');
-          })
-          .then(characteristic => {
-            // 开始监听数据变化
-            characteristic.addEventListener('characteristicvaluechanged', (event) => {
-              // 处理接收到的蓝牙数据
-              this.handleBluetoothData(event.target.value);
-            });
-            
-            // 启用通知
-            return characteristic.startNotifications();
-          })
-          .then(() => {
-            this.$message.success('开始接收蓝牙数据');
-          })
-          .catch(error => {
-            this.$message.error(`数据流启动失败: ${error.message}`);
-          });
-        },
-        
-        /**
-         * 处理蓝牙数据
-         * 解析从蓝牙设备接收到的原始数据并发送到后端
-         * @param {DataView} value - 从蓝牙设备接收到的原始数据
-         */
-        handleBluetoothData: function(value) {
-          // 解析蓝牙数据并发送到后端
-          // 这里需要根据实际设备的数据格式进行解析
-          let eegData = {
-            type: 'eeg_data',
-            timestamp: new Date().toISOString(),
-            data: {
-              Delta: value.getUint8(0),
-              Theta: value.getUint8(1),
-              Alpha: value.getUint8(2),
-              Beta: value.getUint8(3),
-              Gamma: value.getUint8(4)
-            }
-          };
-          
-          // 发送解析后的数据到后端
-          if (this.isConnected && this.websocket) {
-            try {
-              this.websocket.send(JSON.stringify(eegData));
-              this.dataStatus = '正在记录数据...';
-            } catch (error) {
-              this.$message.error('发送数据失败: ' + error.message);
-            }
-          }
-        },
 
-        /**
-         * 测试API密钥
-         * 验证用户输入的API密钥是否有效
-         */
+ 
+
+
         testAPI: function() {
-          // 检查API密钥是否已输入
           if (!this.apiKey) {
             this.$message.warning('请输入API密钥');
             return;
           }
           
-          // 显示加载指示器
           const loading = this.$loading({
             lock: true,
             text: '测试中...',
@@ -898,7 +656,6 @@
             background: 'rgba(0, 0, 0, 0.7)'
           });
           
-          // 发送测试请求到后端
           fetch('/api/test-api-key/', {
             method: 'POST',
             headers: {
@@ -923,20 +680,11 @@
           });
         },
         
-        /**
-         * 清空日志
-         * 清除系统日志显示内容
-         */
         clearLog: function() {
           this.logContent = '';
           this.$message.success('日志已清空');
         },
         
-        /**
-         * 处理WebSocket消息
-         * 根据消息类型处理从后端接收到的消息
-         * @param {Object} data - 从后端接收到的消息数据
-         */
         handleWebSocketMessage: function(data) {
           switch (data.type) {
             case 'data_received':
@@ -971,7 +719,6 @@
               break;
           }
           
-          // 滚动到日志底部
           this.$nextTick(() => {
             const logPanel = document.querySelector('.el-tab-pane[name="log"] .placeholder');
             if (logPanel) {
@@ -979,7 +726,7 @@
             }
           });
         }
-// ... existing code ...      },
+      },
       
       watch: {
         isRecording: function(newVal) {

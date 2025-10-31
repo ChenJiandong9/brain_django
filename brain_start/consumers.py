@@ -57,12 +57,15 @@ class EEGDataConsumer(AsyncWebsocketConsumer):
                     await self.handle_eeg_data(data)
                 elif data['type'] == 'request_analysis':
                     await self.handle_analysis_request(data)
+                elif data['type'] == 'imported_data':
+                    await self.handle_imported_data(data)
         except Exception as e:
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': str(e)
             }))
 
+ 
     async def handle_eeg_data(self, data):
         """处理EEG数据"""
         try:
@@ -75,7 +78,17 @@ class EEGDataConsumer(AsyncWebsocketConsumer):
             # 写入数据，格式化为与分析器兼容的格式
             eeg_data = data.get('data', {})
             if isinstance(eeg_data, dict):
+                # 处理字典格式数据
                 formatted_data = f"Delta {eeg_data.get('Delta', 0)} Theta {eeg_data.get('Theta', 0)} Alpha {eeg_data.get('Alpha', 0)} Beta {eeg_data.get('Beta', 0)} Gamma {eeg_data.get('Gamma', 0)}"
+            elif isinstance(eeg_data, str):
+                # 处理字符串格式数据（来自蓝牙设备的原始数据）
+                # 检查是否为TGAM数据包格式
+                if eeg_data.startswith('AA AA'):
+                    # 解析TGAM数据包
+                    formatted_data = self._parse_tgam_data(eeg_data)
+                else:
+                    # 直接使用字符串数据
+                    formatted_data = eeg_data
             else:
                 formatted_data = str(eeg_data)
             
@@ -94,6 +107,67 @@ class EEGDataConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 'type': 'data_error',
                 'error': str(e)
+            }))
+
+    def _parse_tgam_data(self, raw_data):
+        """
+        解析TGAM数据包格式
+        根据text1.py中的TGAMDataCollector._parse_packet方法实现
+        """
+        try:
+            # 简化的TGAM数据解析（实际应用中需要更复杂的解析逻辑）
+            parts = raw_data.split()
+            
+            # 查找各个频段的值
+            eeg_bands = {
+                'Delta': 0,
+                'Theta': 0,
+                'Alpha': 0,
+                'Beta': 0,
+                'Gamma': 0
+            }
+            
+            # 解析数据
+            for i, part in enumerate(parts):
+                if part == 'Delta' and i + 1 < len(parts):
+                    eeg_bands['Delta'] = int(parts[i + 1])
+                elif part == 'Theta' and i + 1 < len(parts):
+                    eeg_bands['Theta'] = int(parts[i + 1])
+                elif part == 'Alpha' and i + 1 < len(parts):
+                    eeg_bands['Alpha'] = int(parts[i + 1])
+                elif part == 'Beta' and i + 1 < len(parts):
+                    eeg_bands['Beta'] = int(parts[i + 1])
+                elif part == 'Gamma' and i + 1 < len(parts):
+                    eeg_bands['Gamma'] = int(parts[i + 1])
+            
+            # 格式化为标准格式
+            return f"Delta {eeg_bands['Delta']} Theta {eeg_bands['Theta']} Alpha {eeg_bands['Alpha']} Beta {eeg_bands['Beta']} Gamma {eeg_bands['Gamma']}"
+        except Exception as e:
+            logger.error(f"TGAM数据解析失败: {str(e)}")
+            return raw_data
+ 
+
+    async def handle_imported_data(self, data):
+        """处理导入的数据文件"""
+        try:
+            file_path = data.get('filePath', '')
+            if not file_path or not os.path.exists(file_path):
+                raise ValueError("导入的文件不存在")
+            
+            global current_log_file
+            current_log_file = file_path
+            
+            await self.send(text_data=json.dumps({
+                'type': 'import_success',
+                'file_path': file_path
+            }))
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"导入数据处理失败: {error_msg}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': error_msg
             }))
 
     async def handle_analysis_request(self, data):
