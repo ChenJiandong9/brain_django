@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def runoob(request):
     context = {}
     context['hello'] = 'Hello World!'
-    return render(request, 'EEG.html', context)
+    return render(request, 'runoob.html', context)
 def eeg(request):
     context = {}
     context['hello'] = 'EEG Page!'
