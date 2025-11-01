@@ -14,13 +14,14 @@ from channels.auth import AuthMiddlewareStack
 from django.urls import re_path
 from brain_start.consumers import EEGDataConsumer
 
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'brain_django.settings')
 
+ 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    "websocket": AuthMiddlewareStack(
-        URLRouter([
-            re_path(r'ws/eeg/$', EEGDataConsumer.as_asgi()),
-        ])
-    ),
+    "websocket": URLRouter([
+        re_path(r'^ws/eeg/$', EEGDataConsumer.as_asgi()),
+    ]),
 })
+ 

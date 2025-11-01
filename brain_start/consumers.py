@@ -15,6 +15,7 @@ LOG_DIR = "logs"
 ANALYSIS_DIR = "analysis_reports"
 DEFAULT_API_KEY = "51e09aa5-d2dd-41ab-bf91-51ef798844e7"
 
+
 def init_log_file():
     """初始化日志文件"""
     global current_log_file
@@ -39,6 +40,7 @@ def create_new_log_file():
 init_log_file()
 
 
+ 
 class EEGDataConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
@@ -159,7 +161,7 @@ class EEGDataConsumer(AsyncWebsocketConsumer):
 
             # 获取API密钥
             api_key = data.get('api_key', DEFAULT_API_KEY)
-
+            logger.info(f"正在分析数据: {current_log_file}")
             # 执行分析
             analyzer = EEGAnalyzer(current_log_file, api_key)
             report_content, report_path = analyzer.analyze()
@@ -167,7 +169,8 @@ class EEGDataConsumer(AsyncWebsocketConsumer):
             # 分析后轮换日志
             create_new_log_file()
 
-            # 返回结果
+            # 返回结果 
+            print(f"分析结果保存在: {report_path}")
             await self.send(text_data=json.dumps({
                 'type': 'analysis_result',
                 'success': True,

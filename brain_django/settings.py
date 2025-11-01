@@ -72,12 +72,15 @@ TEMPLATES = [
 ]
 # 添加Channels配置
 WSGI_APPLICATION = 'brain_django.wsgi.application'
-
-
 ASGI_APPLICATION = 'brain_django.asgi.application'
+# ASGI_APPLICATION = 'brain_django.routing.application'
+   
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [("127.0.0.1", 6379)],
+        },
     },
 }
 
@@ -141,6 +144,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
+
+DEBUG = True
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
