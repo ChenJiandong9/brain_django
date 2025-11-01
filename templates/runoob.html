@@ -348,7 +348,7 @@
             <el-button id="scann_button" type="primary" size="small" @click="scanDevices">扫描</el-button>
           </div>
           <div class="status-info">
-            <p>连接状态: <span style="color: red;">未连接</span></p>
+            <p>连接状态: <span style="color: red;">{{deviceStatus}}</span></p>
             <p>信号质量: <span>-- /200</span></p>
           </div>
         </div>
@@ -437,8 +437,7 @@
         currentFilePath: ''
       },
       methods: {
- 
-       /**
+        /**
          * 连接设备函数
          * 建立与后端WebSocket服务器的连接，用于传输EEG数据
          * 根据当前协议（HTTP或HTTPS）自动选择ws://或wss://协议
@@ -453,17 +452,25 @@
           try {
             // 使用绝对路径，避免协议问题
             const wsUrl = 'ws://' + window.location.host + '/ws/eeg/';
+            console.log('尝试连接到WebSocket:', wsUrl); // 添加调试日志
             
             this.websocket = new WebSocket(wsUrl);
             
             // 连接成功回调
             this.websocket.onopen = () => {
+              console.log('WebSocket连接成功'); // 添加调试日志
               this.isConnected = true;
               this.deviceStatus = '已连接';
               this.$message.success('设备连接成功');
+              // 更新页面上的连接状态文本
+              const statusElement = document.querySelector('.status-info span');
+              if (statusElement) {
+                statusElement.style.color = 'green';
+                statusElement.textContent = '已连接';
+              }
             };
             
-            // 接收消息回调
+            // 接收消息回调 - 这里是处理后端返回消息的关键部分
             this.websocket.onmessage = (event) => {
               const data = JSON.parse(event.data);
               this.handleWebSocketMessage(data);
@@ -479,35 +486,83 @@
             
             // 连接错误回调
             this.websocket.onerror = (error) => {
+              console.error('WebSocket连接错误:', error); // 添加调试日志
               this.$message.error('连接发生错误: ' + error.message);
+              // 更新页面上的连接状态文本
+              const statusElement = document.querySelector('.status-info span');
+              if (statusElement) {
+                statusElement.style.color = 'red';
+                statusElement.textContent = '连接错误';
+              }
             };
           } catch (error) {
+            console.error('WebSocket连接异常:', error); // 添加调试日志
             this.$message.error('连接失败: ' + error.message);
           }
         },
         
-        /**
-         * 开始/停止记录数据
-         * 切换数据记录状态，并启动或停止数据发送
+                /**
+         * 加载分析报告
+         * 从服务器获取并显示分析报告
+         * @param {string} filename - 报告文件名
          */
-        startRecording: function() {
-          // 检查设备是否已连接
-          if (!this.isConnected) {
-            this.$message.warning('请先连接设备');
+        loadReport: function(filename) {
+          // 确保文件名不为空
+          if (!filename) {
+            this.$message.error('报告文件名为空');
             return;
           }
           
+          // 构造报告URL
+          const reportUrl = `/reports/${filename}`;
+          
+          fetch(reportUrl)
+          .then(response => {
+            if (response.ok) {
+              return response.text();
+            } else {
+              throw new Error('报告文件不存在');
+            }
+          })
+          .then(html => {
+            this.reportContent = html;
+            this.activeTab = 'report';
+          })
+          .catch(error => {
+            this.$message.error('加载报告失败: ' + error.message);
+          });
+        },
+
+           /**
+         * 开始/停止记录数据
+         * 切换记录状态并控制EEG数据发送
+         */
+        startRecording: function() {
           // 切换记录状态
           this.isRecording = !this.isRecording;
           
           if (this.isRecording) {
+            // 开始记录
+            if (!this.isConnected) {
+              this.$message.warning('请先连接设备');
+              this.isRecording = false;
+              return;
+            }
+            
+            this.$message.success('开始记录数据');
             // 开始发送EEG数据
             this.sendEEGData();
-            this.$message.success('开始记录EEG数据');
           } else {
-            this.$message.info('已停止记录');
+            // 停止记录
+            this.$message.info('已停止记录数据');
+            this.dataStatus = '记录已停止';
           }
         },
+
+        /**
+         * 导入数据函数
+         * 允许用户上传EEG数据文件进行分析
+         */
         
         /**
          * 发送EEG数据
@@ -534,7 +589,7 @@
           
           // 如果仍在记录状态，1秒后再次发送数据
           if (this.isRecording) {
-            setTimeout(() => this.sendEEGData(), 1000);
+            setTimeout(() => this.sendEEGData(), 1000);       //递推，除非停止记录状态，否则一直在执行sendEEGData
           }
         },
         
@@ -616,23 +671,8 @@
           });
         },
         
-        /**
-         * 加载分析报告
-         * 从服务器获取并显示分析报告
-         * @param {string} filename - 报告文件名
-         */
-        loadReport: function(filename) {
-          fetch(`/reports/${filename}`)
-          .then(response => response.text())
-          .then(html => {
-            this.reportContent = html;
-            this.activeTab = 'report';
-          })
-          .catch(error => {
-            this.$message.error('加载报告失败: ' + error.message);
-          });
-        },
-        
+
+
         /**
          * 导入数据函数
          * 允许用户上传EEG数据文件进行分析
@@ -695,12 +735,7 @@
         testBackend: function() {
           this.$message.success('后端连接正常');
         },
-          
-
-
-
-
-
+        
         /**
          * 检查蓝牙支持情况
          * 检测浏览器是否支持Web Bluetooth API以及运行环境是否满足要求
@@ -770,7 +805,7 @@
             return device.gatt.connect();
           })
           .then(server => {
-            this.$message.success('蓝牙设备连接成功');
+            this.$message.success('蓝牙设备配对成功');
           })
           .catch(error => {
             this.$message.error(`扫描失败: ${error.message}`);
@@ -884,14 +919,6 @@
             }
           }
         },
-
-
-
-
-
-
-
-
         
         /**
          * 测试API密钥
@@ -945,66 +972,73 @@
           this.logContent = '';
           this.$message.success('日志已清空');
         },
-        
-                    /**
-             * 处理WebSocket消息
-             * 根据消息类型处理从后端接收到的消息
-             * @param {Object} data - 从后端接收到的消息数据
-             */
-            handleWebSocketMessage: function(data) {
-              switch (data.type) {
-                case 'data_received':
-                  this.logContent += `[${new Date().toLocaleTimeString()}] 数据已接收: ${data.timestamp}\n`;
-                  break;
-                  
-                case 'data_error':
-                  this.$message.error('数据处理错误: ' + data.error);
-                  this.logContent += `[${new Date().toLocaleTimeString()}] 错误: ${data.error}\n`;
-                  break;
-                  
-                case 'import_success':
-                  this.$message.success('导入数据已成功保存到服务器');
-                  this.logContent += `[${new Date().toLocaleTimeString()}] 导入数据已保存: ${data.file_path}\n`;
-                  break;
-                  
-                case 'analysis_result':
-                  if (data.success) {
-                    this.reportContent = data.content;
-                    this.activeTab = 'report';
-                    this.$message.success('分析完成');
-                    this.logContent += `[${new Date().toLocaleTimeString()}] 分析完成\n`;
-                  } else {
-                    this.$message.error('分析失败: ' + data.error);
-                    this.logContent += `[${new Date().toLocaleTimeString()}] 分析失败: ${data.error}\n`;
-                  }
-                  break;
-                  
-                case 'error':
-                  this.$message.error('服务器错误: ' + data.message);
-                  this.logContent += `[${new Date().toLocaleTimeString()}] 服务器错误: ${data.message}\n`;
-                  break;
-              }
+        /**
+         * 处理WebSocket消息
+         * 根据消息类型处理从后端接收到的消息
+         * @param {Object} data - 从后端接收到的消息数据
+         */
+        handleWebSocketMessage: function(data) {
+          switch (data.type) {
+            case 'data_received':
+              this.logContent += `[${new Date().toLocaleTimeString()}] 数据已接收: ${data.timestamp}\n`;
+              break;
               
-              // 滚动到日志底部
-              this.$nextTick(() => {
-                const logPanel = document.querySelector('.el-tab-pane[name="log"] .placeholder');
-                if (logPanel) {
-                  logPanel.scrollTop = logPanel.scrollHeight;
+            case 'data_error':
+              this.$message.error('数据处理错误: ' + data.error);
+              this.logContent += `[${new Date().toLocaleTimeString()}] 错误: ${data.error}\n`;
+              break;
+              
+            case 'import_success':
+              this.$message.success('导入数据已成功保存到服务器');
+              this.logContent += `[${new Date().toLocaleTimeString()}] 导入数据已保存: ${data.file_path}\n`;
+              break;
+              
+            case 'analysis_result':
+              if (data.success) {
+                // 处理分析成功的返回结果
+                // 使用loadReport函数加载和显示报告
+                if (data.path) {
+                  this.loadReport(data.path);
+                } else if (data.content) {
+                  // 如果直接返回了内容，则直接显示
+                  this.reportContent = data.content;
+                  this.activeTab = 'report';
                 }
-              });
-            }
-          },
-     
-          watch: {
-            isRecording: function(newVal) {
-              this.dataStatus = newVal ? '正在记录数据...' : '未保存数据';
-            }
-          },
-          
-          mounted: function() {
-            this.testBackend();
+                this.$message.success('分析完成');
+                this.logContent += `[${new Date().toLocaleTimeString()}] 分析完成\n`;
+              } else {
+                // 处理分析失败的情况
+                this.$message.error('分析失败: ' + data.error);
+                this.logContent += `[${new Date().toLocaleTimeString()}] 分析失败: ${data.error}\n`;
+              }
+              break;
+              
+            case 'error':
+              this.$message.error('服务器错误: ' + data.message);
+              this.logContent += `[${new Date().toLocaleTimeString()}] 服务器错误: ${data.message}\n`;
+              break;
           }
-        });
+          
+          // 滚动到日志底部
+          this.$nextTick(() => {
+            const logPanel = document.querySelector('.el-tab-pane[name="log"] .placeholder');
+            if (logPanel) {
+              logPanel.scrollTop = logPanel.scrollHeight;
+            }
+          });
+        }
+      },
+      
+      watch: {
+        isRecording: function(newVal) {
+          this.dataStatus = newVal ? '正在记录数据...' : '未保存数据';
+        }
+      },
+      
+      mounted: function() {
+        this.testBackend();
+      }
+    });
   </script>
   {% endverbatim %}
 </body>

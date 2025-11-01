@@ -72,9 +72,9 @@ TEMPLATES = [
 ]
 # 添加Channels配置
 WSGI_APPLICATION = 'brain_django.wsgi.application'
-
-
 ASGI_APPLICATION = 'brain_django.asgi.application'
+# ASGI_APPLICATION = 'brain_django.routing.application'
+   
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
