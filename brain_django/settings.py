@@ -91,15 +91,15 @@ CHANNEL_LAYERS = {
 #     }
 # }
 DATABASES={
-    # 'default': 
-    # {
-    #     'ENGINE': 'django.db.backends.mysql',
-    #     'NAME': 'brain_django',
-    #     'USER': 'root',
-    #     'PASSWORD': '',
-    #     'HOST': '10.5.111.174',
-    #     'PORT': '3306',
-    # }
+    'default': 
+    {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'brain_django',
+        'USER': 'root',
+        'PASSWORD': '3.14',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
     
 }
 

@@ -147,28 +147,6 @@ class EEGDataConsumer(AsyncWebsocketConsumer):
             return raw_data
  
 
-    async def handle_imported_data(self, data):
-        """处理导入的数据文件"""
-        try:
-            file_path = data.get('filePath', '')
-            if not file_path or not os.path.exists(file_path):
-                raise ValueError("导入的文件不存在")
-            
-            global current_log_file
-            current_log_file = file_path
-            
-            await self.send(text_data=json.dumps({
-                'type': 'import_success',
-                'file_path': file_path
-            }))
-            
-        except Exception as e:
-            error_msg = str(e)
-            logger.error(f"导入数据处理失败: {error_msg}")
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': error_msg
-            }))
 
     async def handle_analysis_request(self, data):
         """处理分析请求"""
@@ -205,3 +183,25 @@ class EEGDataConsumer(AsyncWebsocketConsumer):
                 'success': False,
                 'error': error_msg
             }))
+    # async def handle_imported_data(self, data):
+    #     """处理导入的数据文件"""
+    #     try:
+    #         file_path = data.get('filePath', '')
+    #         if not file_path or not os.path.exists(file_path):
+    #             raise ValueError("导入的文件不存在")
+            
+    #         global current_log_file
+    #         current_log_file = file_path
+            
+    #         await self.send(text_data=json.dumps({
+    #             'type': 'import_success',
+    #             'file_path': file_path
+    #         }))
+            
+    #     except Exception as e:
+    #         error_msg = str(e)
+    #         logger.error(f"导入数据处理失败: {error_msg}")
+    #         await self.send(text_data=json.dumps({
+    #             'type': 'error',
+    #             'message': error_msg
+    #         }))
